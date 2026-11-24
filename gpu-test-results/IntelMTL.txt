@@ -20,6 +20,8 @@ Failed:     cs_imgload_tfe and cs_imgload_d16_tfe, in every run: "r32 sint (sint
             #98, and LLVM's TFE/LWE result initialization); the two fixtures expect it cleared.
             So the failures are in the fixtures' expectation, not the translator or this GPU.
             #98, which cleared the status, made both pass but was closed for that reason.
+            #892 has since corrected both fixtures to expect the seed kept: at main
+            0b45fdc21 they pass on this GPU, native and emulated.
 Skipped:    native 52 = 16 documented "run by d3d12_*_test / w64_graphics.py" cases
             (cs_buf_counter, cs_buf_typed, cs_m4_fill, cs_m4_indirect, ps_live_width, ps_m15,
             ps_m2, ps_m2_array, ps_m2_literal, ps_m2_uoff, ps_m3, ps_m3_post, ps_m3_query,

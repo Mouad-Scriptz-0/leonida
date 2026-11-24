@@ -129,4 +129,5 @@ emulated on this GPU, and reran the tfe pair with #98 applied.
 The two failures are not a translator or driver problem. Both fixtures seed the tfe status VGPR and expect a
 resident read to clear it, but native gfx1036 keeps the seed (the review on #98), and LLVM initializes the TFE/LWE
 result itself before the instruction for the same reason. The translator keeps it too. #98, which cleared it, made
-both fixtures pass and was closed; the fixtures are what needs correcting.
+both fixtures pass and was closed. #892 has since corrected both fixtures to expect the seed kept; at `main`
+`0b45fdc21` they pass on this GPU, native and emulated.
