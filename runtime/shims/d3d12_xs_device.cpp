@@ -2054,7 +2054,6 @@ HRESULT proxy_create_committed_resource3_x(DeviceProxy* self, std::uint64_t heap
 // Xbox slot 86: CreatePipelineState(desc, riid, out), forwarded to PC ID3D12Device2::CreatePipelineState (PC slot 47).
 HRESULT proxy_create_pipeline_state(DeviceProxy* self, const D3D12_PIPELINE_STATE_STREAM_DESC* desc, const IID* riid,
                                     void** out) {
-    note_slot(86);
     if (out) *out = nullptr;
     if (self->slot_count <= 47) return refuse_beyond_device(86, self->slot_count);  // predates ID3D12Device2
     if (!riid) return E_POINTER;
@@ -2065,7 +2064,6 @@ HRESULT proxy_create_pipeline_state(DeviceProxy* self, const D3D12_PIPELINE_STAT
 // Xbox slot 101: CreateStateObject(desc, riid, out), forwarded to PC ID3D12Device5::CreateStateObject (PC slot 62,
 // displaced on Xbox by compute-PSO slot 62).
 HRESULT proxy_create_state_object(DeviceProxy* self, const D3D12_STATE_OBJECT_DESC* desc, const IID* riid, void** out) {
-    note_slot(101);
     if (out) *out = nullptr;
     if (self->slot_count <= 62) return refuse_beyond_device(101, self->slot_count);  // predates ID3D12Device5
     if (!riid) return E_POINTER;
@@ -2082,7 +2080,6 @@ HRESULT proxy_create_state_object(DeviceProxy* self, const D3D12_STATE_OBJECT_DE
 // D3D12_RESOURCE_FLAGS are normalized on the copy before the PC call.
 std::uint64_t proxy_get_resource_allocation_info2(DeviceProxy* self, std::uint64_t a1, std::uint64_t a2,
                                                   std::uint64_t a3, std::uint64_t a4, std::uint64_t a5) {
-    note_slot(108);
     DeviceProxy* proxy = nullptr;
     D3D12_RESOURCE_ALLOCATION_INFO* ret = nullptr;
     if (is_device_proxy(self)) {
@@ -2216,16 +2213,6 @@ std::uint64_t WINAPI proxy_slot(DeviceProxy* self, std::uint64_t a1, std::uint64
             reinterpret_cast<void**>(a7)));
     } else if constexpr (Slot == kCreateCommittedResource3X) {
         return hr_to_u64(proxy_create_committed_resource3_x(self, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10));
-    } else if constexpr (Slot == 86) {
-        return hr_to_u64(proxy_create_pipeline_state(
-            self, reinterpret_cast<const D3D12_PIPELINE_STATE_STREAM_DESC*>(a1),
-            reinterpret_cast<const IID*>(a2), reinterpret_cast<void**>(a3)));
-    } else if constexpr (Slot == 101) {
-        return hr_to_u64(proxy_create_state_object(
-            self, reinterpret_cast<const D3D12_STATE_OBJECT_DESC*>(a1),
-            reinterpret_cast<const IID*>(a2), reinterpret_cast<void**>(a3)));
-    } else if constexpr (Slot == 108) {
-        return proxy_get_resource_allocation_info2(self, a1, a2, a3, a4, a5);
     } else {
         if constexpr (Slot == 26) {
             // The console form has the device in RDX. A PC C++ caller has the proxy in RCX and its return buffer in
@@ -2279,16 +2266,28 @@ std::uint64_t WINAPI proxy_slot(DeviceProxy* self, std::uint64_t a1, std::uint64
             return hr_to_u64(proxy_create_command_list_x(self, a1, a2, a3, reinterpret_cast<const IID*>(a4),
                                                          reinterpret_cast<void**>(a5)));
         }
-        if (Slot >= self->slot_count) return hr_to_u64(refuse_beyond_device(Slot, self->slot_count));
+        if constexpr (Slot == 86) {
+            return hr_to_u64(proxy_create_pipeline_state(
+                self, reinterpret_cast<const D3D12_PIPELINE_STATE_STREAM_DESC*>(a1),
+                reinterpret_cast<const IID*>(a2), reinterpret_cast<void**>(a3)));
+        } else if constexpr (Slot == 101) {
+            return hr_to_u64(proxy_create_state_object(
+                self, reinterpret_cast<const D3D12_STATE_OBJECT_DESC*>(a1),
+                reinterpret_cast<const IID*>(a2), reinterpret_cast<void**>(a3)));
+        } else if constexpr (Slot == 108) {
+            return proxy_get_resource_allocation_info2(self, a1, a2, a3, a4, a5);
+        } else {
+            if (Slot >= self->slot_count) return hr_to_u64(refuse_beyond_device(Slot, self->slot_count));
 
-        // The PC vtable entry, called with the PC device as `this`. Integer/pointer arguments, the hidden
-        // struct-return pointer and any stack arguments keep their positions; XMM registers are untouched.
-        using ForwardFn = std::uint64_t(WINAPI*)(void*, std::uint64_t, std::uint64_t, std::uint64_t,
-                                                 std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t,
-                                                 std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t,
-                                                 std::uint64_t, std::uint64_t, std::uint64_t);
-        auto fn = reinterpret_cast<ForwardFn>(self->real_vtable[Slot]);
-        return fn(self->real, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+            // The PC vtable entry, called with the PC device as `this`. Integer/pointer arguments, the hidden
+            // struct-return pointer and any stack arguments keep their positions; XMM registers are untouched.
+            using ForwardFn = std::uint64_t(WINAPI*)(void*, std::uint64_t, std::uint64_t, std::uint64_t,
+                                                     std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t,
+                                                     std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t,
+                                                     std::uint64_t, std::uint64_t, std::uint64_t);
+            auto fn = reinterpret_cast<ForwardFn>(self->real_vtable[Slot]);
+            return fn(self->real, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+        }
     }
 }
 
